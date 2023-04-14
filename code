@@ -1,0 +1,189 @@
+
+// Import required modules
+const express = require('express');
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+
+// Initialize express app
+const app = express();
+
+// Use bodyParser middleware for parsing request bodies
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+
+// Connect to MongoDB database
+mongoose.connect('mongodb://localhost/foodItems', { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('MongoDB connected'))
+    .catch(err => console.log(err));
+
+// Define Food model
+const Food = mongoose.model('Food', {
+    foodName: String,
+    foodType: String,
+    maxDeliveryTime: Number,
+    price: Number
+});
+
+// API endpoint: Get Food
+app.get('/food', (req, res) => {
+    Food.find({}, (err, foodItems) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            res.json(foodItems);
+        }
+    });
+});
+
+// API endpoint: Get Food with specific type
+app.get('/food/type/:type', (req, res) => {
+    const type = req.params.type;
+    Food.find({ foodType: type }, (err, foodItems) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            res.json(foodItems);
+        }
+    });
+});
+
+// API endpoint: Get Food with specific type and max delivery time
+app.get('/food/type/:type/maxdeliverytime/:maxdeliverytime', (req, res) => {
+    const type = req.params.type;
+    const maxDeliveryTime = req.params.maxdeliverytime;
+    Food.find({ foodType: type, maxDeliveryTime: maxDeliveryTime }, (err, foodItems) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            res.json(foodItems);
+        }
+    });
+});
+
+// API endpoint: Get Food by ID
+app.get('/food/:id', (req, res) => {
+    const id = req.params.id;
+    Food.findById(id, (err, foodItem) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            if (foodItem) {
+                res.json(foodItem);
+            } else {
+                res.status(404).json({ error: 'Food item not found' });
+            }
+        }
+    });
+});
+
+// API endpoint: Create Food
+app.post('/food', (req, res) => {
+    const { foodName, foodType, maxDeliveryTime, price } = req.body;
+
+    // Validate input data
+    if (!foodName || !foodType || !maxDeliveryTime || !price) {
+        res.status(400).json({ error: 'Missing required fields' });
+    } else if (!['delicious food', 'nutritious food', 'fast food', 'beverages', 'dessert'].includes(foodType)) {
+        res.status(400).json({ error: 'Invalid food type' });
+    } else if (typeof maxDeliveryTime !== 'number' || maxDeliveryTime <= 0) {
+        res.status(400).json({ error: 'Invalid max delivery time' });
+    } else if (typeof price !== 'number' || price <= 0) {
+        res.status(400).json({ error: 'Invalid price' });
+    } else {
+        // Create a new Food item
+        const newFood = new Food({
+            foodName,
+            foodType,
+            maxDeliveryTime,
+            price
+        });
+
+        // Save the new Food item to the database
+        newFood.save((err, foodItem) => {
+            if (err) {
+                res.status(500).json({ error: 'Internal server error' });
+            } else {
+                res.status(201).json(foodItem);
+            }
+        });
+    }
+});
+
+// API endpoint: Update Food by ID
+app.put('/food/:id', (req, res) => {
+    const id = req.params.id;
+    const { foodName, foodType, maxDeliveryTime, price } = req.body;
+
+    // Validate input data
+    if (!foodName || !foodType || !maxDeliveryTime || !price) {
+        res.status(400).json({ error: 'Missing required fields' });
+    } else if (!['delicious food', 'nutritious food', 'fast food', 'beverages', 'dessert'].includes(foodType)) {
+        res.status(400).json({ error: 'Invalid food type' });
+    } else if (typeof maxDeliveryTime !== 'number' || maxDeliveryTime <= 0) {
+        res.status(400).json({ error: 'Invalid max delivery time' });
+    } else if (typeof price !== 'number' || price <= 0) {
+        res.status(400).json({ error: 'Invalid price' });
+    } else {
+        // Find the Food item by ID and update it
+        Food.findByIdAndUpdate(id, { $set: { foodName, foodType, maxDeliveryTime, price } }, { new: true }, (err, foodItem) => {
+            if (err) {
+                res.status(500).json({ error: 'Internal server error' });
+            } else {
+                if (foodItem) {
+                    res.json(foodItem);
+                } else {
+                    res.status(404).json({ error: 'Food item not found' });
+                }
+            }
+        });
+    }
+});
+
+// API endpoint: Delete Food by ID
+app.delete('/food/:id', (req, res) => {
+    const id = req.params.id;
+
+    // Find the Food item by ID and remove it
+    Food.findByIdAndRemove(id, (err, foodItem) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            if (foodItem) {
+                res.json({ message: 'Food item deleted successfully' });
+            } else
+            {
+                res.status(404).json({ error: 'Food item not found' });
+            }
+        }
+    });
+});
+
+// API endpoint: Get All Food Items
+app.get('/food', (req, res) => {
+    // Retrieve all Food items from the database
+    Food.find({}, (err, foodItems) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            res.json(foodItems);
+        }
+    });
+});
+
+// API endpoint: Get Food by ID
+app.get('/food/:id', (req, res) => {
+    const id = req.params.id;
+
+    // Find the Food item by ID
+    Food.findById(id, (err, foodItem) => {
+        if (err) {
+            res.status(500).json({ error: 'Internal server error' });
+        } else {
+            if (foodItem) {
+                res.json(foodItem);
+            } else {
+                res.status(404).json({ error: 'Food item not found' });
+            }
+        }
+    });
+});
